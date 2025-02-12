@@ -3,10 +3,10 @@
 #   have "UPDATECLI_GITHUB_ACTOR" env set to your github username
 #   have "UPDATECLI_GITHUB_TOKEN" env set to your github token
 #   have the latest version of updatecli installed
-#   'updatecli diff -v updatecli/values.yaml -c updatecli/updatecli.d/vsphere-csi.yml'
+#   'updatecli diff -v updatecli/values.yaml -c updatecli/updatecli.d/vsphere-cpi.yml'
 # In the future, more useful files should be added to this directory.
 ---
-name: "Update vsphere csi/cpi charts and images"
+name: "Update flannel charts and images"
 # Make sure we can pull in github repos from multiple orgs
 scms:
   rke2:
@@ -16,36 +16,43 @@ scms:
       email: "{{ .github.email }}"
       username: "{{ requiredEnv .github.username }}"
       token: '{{ requiredEnv .github.token }}'
-      owner: rancher
+      owner: rbrtbnfgl
       repository: rke2
       branch: master
 
 sources:
-  vsphere-csi:
-    name: "Get vsphere-csi chart version"
+  flannel:
+    name: "Get flannel chart version"
     kind: "helmchart"
     spec:
       url: https://rancher.github.io/rke2-charts
-      name: rancher-vsphere-csi
+      name: rke2-flannel
       versionfilter:
-        kind: semver
+        kind: "latest"
+  issue:
+    name: "Get issue number"
+    kind: shell
+    sourceid: flannel
+    spec:
+      command: bash ./updatecli/scripts/get_issue_number.sh Flannel
+
   
 conditions:
-  vsphereCSIVersionShouldBeUpdated:
-    name: "Check if vsphere-csi chart should be updated or not"
+  flannelVersionShouldBeUpdated:
+    name: "Check if flannel chart should be updated or not"
     kind: shell
-    sourceid: vsphere-csi
+    sourceid: flannel
     spec:
-      command: bash ./updatecli/scripts/validate_version.sh rancher-vsphere-csi
+      command: bash ./updatecli/scripts/validate_version.sh rke2-flannel
 
 targets:
-  updateVsphereCSI:
-    name: "Update the vsphere-csi airgap images"
+  flannelCNI:
+    name: "Update the flannel airgap images"
     kind: "shell"
     scmid: "rke2"
-    sourceid: vsphere-csi
+    sourceid: flannel
     spec:
-      command: bash ./updatecli/scripts/update_chart_and_images.sh rancher-vsphere-csi
+      command: bash ./updatecli/scripts/update_chart_and_images_cni.sh rke2-flannel
 
 actions:
   github:
@@ -56,4 +63,5 @@ actions:
       draft: false
       mergemethod: squash
       parent: false
-      title: "Update vsphere-csi chart"
+      title: 'Update flannel chart to {{ source "flannel" }}'
+      description: 'Issue: #{{ source "issue" }}'
