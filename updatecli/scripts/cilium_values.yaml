@@ -1,0 +1,10 @@
+clustermesh:
+  useAPIServer: true
+envoy:
+  enabled: true
+hubble:
+  ui:
+    enabled: true
+  relay:
+    enabled: true
+  enabled: true
