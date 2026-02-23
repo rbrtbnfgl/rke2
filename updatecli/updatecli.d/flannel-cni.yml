@@ -1,0 +1,61 @@
+# This small test makes sure that updatecli is working properly on a repo.
+# To test this:
+#   have "UPDATECLI_GITHUB_ACTOR" env set to your github username
+#   have "UPDATECLI_GITHUB_TOKEN" env set to your github token
+#   have the latest version of updatecli installed
+#   'updatecli diff -v updatecli/values.yaml -c updatecli/updatecli.d/vsphere-cpi.yml'
+# In the future, more useful files should be added to this directory.
+---
+name: "Update flannel charts and images"
+# Make sure we can pull in github repos from multiple orgs
+scms:
+  rke2:
+    kind: "github"
+    spec:
+      user: "{{ .github.user }}"
+      email: "{{ .github.email }}"
+      username: "{{ requiredEnv .github.username }}"
+      token: '{{ requiredEnv .github.token }}'
+      owner: rbrtbnfgl
+      repository: rke2
+      branch: master
+
+sources:
+  flannel:
+    name: "Get flannel chart version"
+    kind: "helmchart"
+    spec:
+      url: https://rancher.github.io/rke2-charts
+      name: rke2-flannel
+      versionfilter:
+        kind: "latest"
+  
+conditions:
+  flannelVersionShouldBeUpdated:
+    name: "Check if flannel chart should be updated or not"
+    kind: shell
+    sourceid: flannel
+    spec:
+      command: bash ./updatecli/scripts/validate_version.sh rke2-flannel
+
+targets:
+  flannelCNI:
+    name: "Update the flannel airgap images"
+    kind: "shell"
+    scmid: "rke2"
+    sourceid: flannel
+    spec:
+      command: bash ./updatecli/scripts/update_chart_and_images_cni.sh rke2-flannel
+
+actions:
+  github:
+    kind: "github/pullrequest"
+    scmid: "rke2"
+    spec:
+      automerge: false
+      draft: false
+      mergemethod: squash
+      parent: false
+      title: 'Update flannel chart to {{ source "flannel" }}'
+      description: 'This is an automated PR to update Helm chart versions.
+            @copilot create an issue and tag it here'
