@@ -108,6 +108,10 @@ jobs:
           version: type=image,tag=29
           daemon-config: '{"features":{"containerd-snapshotter":true}}'
           set-host: true
+      - name: Make /sys shared inside DinD container
+        run: |
+          docker run --rm --privileged --pid=host alpine:latest \
+            nsenter -t 1 -m -u -n -i mount --make-rshared /sys
       - name: Set up Containerd
         run: |
           echo CONTAINERD_ADDRESS=$(docker info -f '{{.Containerd.Address}}') >> "$GITHUB_ENV"
